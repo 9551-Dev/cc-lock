@@ -350,5 +350,9 @@ if registerWindow.registered then
             print("enrypting: "..shell.resolve(path))
             fs.encrypt(shell.resolve(path))
         end)
+        print()
+        print("encryption finished. rebooting in 3 seconds, you can terminate to cancel at any point")
+        sleep(3)
+        os.reboot()
     end
 end
