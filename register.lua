@@ -10,7 +10,7 @@ local textures = {
     switchOn = guih.load_texture({[3]={[5]={t="d",s=" ",b="d",},},[4]={[5]={t="d",s=" ",b="0",},},offset={3,9,11,4,},}),
 }
 
-RegisterWindow = {
+local RegisterWindow = {
     gui=nil,
     parentFrame=nil,
     frame=nil,
@@ -27,6 +27,7 @@ RegisterWindow = {
         otpInstance={},
     },
     marginX=1, -- indicate the size of the qrcode in screen2
+    registered=false,
 }
 
 function RegisterWindow:new(o)
@@ -89,9 +90,11 @@ function RegisterWindow:placeGlobalScreen()
     self.globalScreen.cancel = self.child.create.button({
         name="cancel",
         x=1, y=15, height=3, width=8,
-        text=self.gui.text({
+        text=self.child.text({
             text="Cancel",
-            blit={"FFFFFF", "EEEEEE"}
+            blit={"ffffff", "eeeeee"},
+            transparent=true,
+            centered=true
         }),
         background_color=colors.red,
         on_click=function()
@@ -101,9 +104,11 @@ function RegisterWindow:placeGlobalScreen()
     self.globalScreen.continue = self.child.create.button({
         name="continue",
         x=34, y=15, height=3, width=10,
-        text=self.gui.text({
+        text=self.child.text({
             text="Continue",
-            blit={"FFFFFFFF", "DDDDDDDD"}
+            transparent=true,
+            centered=true,
+            blit={"ffffffff", "dddddddd"}
         }),
         background_color=colors.green,
         on_click=function() self:screen1Continue() end,
@@ -124,6 +129,10 @@ function RegisterWindow:placeScreen1()
         x=17, y=3, width=10,
         selected=true,
         background_color=colors.gray,
+        on_enter=function(object)
+            object.selected = false
+            self.screen1.password1.selected = true
+        end
     })
     self.screen1.password1 = self.child.create.inputbox({
         name="password1",
@@ -131,6 +140,11 @@ function RegisterWindow:placeScreen1()
         char_limit=math.huge,
         replace_char="*",
         background_color=colors.gray,
+        on_enter=function(object)
+            object.selected = false
+            self.screen1.password2.selected = true
+        end,
+        logic_order=-1
     })
     self.screen1.password2 = self.child.create.inputbox({
         name="password2",
@@ -138,6 +152,10 @@ function RegisterWindow:placeScreen1()
         char_limit=math.huge,
         replace_char="*",
         background_color=colors.gray,
+        on_enter=function(object)
+            self.globalScreen.continue.on_click(self.globalScreen.continue)
+        end,
+        logic_order=-2
     })
     self.screen1.enable2FA = self.child.create.switch({
         name="2fa",
@@ -156,8 +174,6 @@ function RegisterWindow:hideScreen1()
     end
     self:clearContent()
 end
-
-
 function RegisterWindow:drawScreen2()
     self:writeAt(self.marginX, 1, "Setup 2FA")
     self:writeAt(self.marginX, 3, "Your secret key is:")
@@ -236,6 +252,7 @@ function RegisterWindow:screen1Continue()
             self:setScreen2()
         else
             self:saveCredential()
+            self.registered = true
             self.running = false
         end
     end
@@ -272,6 +289,7 @@ function RegisterWindow:screen2Continue()
         self.window.write("your credentials")
         self.globalScreen.continue.on_click = function()
             self:saveCredential()
+            self.registered = true
             self.running = false
         end
     end
@@ -303,14 +321,34 @@ function RegisterWindow:start()
     self.gui.execute(
         function ()
             while self.running do
-               sleep()
-            end 
+                sleep()
+            end
+            self.gui.term_object.clear()
+            self.gui.term_object.setCursorPos(1, 1) -- reset the terminal
+            if self.registered then
+                local old = term.redirect(self.gui.term_object)
+                print("Your credentials have been saved.")
+                print("To improve security, check if the setting allow_disk_startup is set to false.")
+                print("If you want to disable the lock, you can delete the .credentials file, or run the command \"set shell.allow_startup false\".")
+                term.redirect(old)
+            end
         end
     )
-
-    term.setCursorPos(1, 1) -- reset the terminal cursor
 end
 
 local registerWindow = RegisterWindow:new(nil)
 
 registerWindow:start()
+
+if registerWindow.registered then
+    print("Your files will now get encrypted!, enter Y to confirm")
+    local input = read()
+    if input:lower():sub(1,1) == "y" then
+        print("unlocking..")
+        fs.unlock(registerWindow.screen1.password1.input)
+        window_manager.go_paths_encrypted("",function(path)
+            print("enrypting: "..shell.resolve(path))
+            fs.encrypt(shell.resolve(path))
+        end)
+    end
+end

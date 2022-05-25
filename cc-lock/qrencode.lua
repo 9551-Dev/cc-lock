@@ -475,7 +475,7 @@ local int_alpha = {
 }
 
 -- We only need the polynomial generators for block sizes 7, 10, 13, 15, 16, 17, 18, 20, 22, 24, 26, 28, and 30. Version
--- 2 of the qr codes don't need larger ones (as opposed to version 1). The table has the format x^1*ɑ^21 + x^2*a^102 ...
+-- 2 of the qr codes don't need larger ones (as opposed to version 1). The table has the format x^1*?^21 + x^2*a^102 ...
 local generator_polynomial = {
 	 [7] = { 21, 102, 238, 149, 146, 229,  87,   0},
 	[10] = { 45,  32,  94,  64,  70, 118,  61,  46,  67, 251,   0 },

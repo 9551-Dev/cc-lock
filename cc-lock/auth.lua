@@ -7,7 +7,7 @@ local window_manager = require("cc-lock.window")
 local sha1 = require("cc-lock.otp")("sha1")
 local totp = require("cc-lock.otp")("totp")
 
-AuthenticationWindow = {
+local AuthenticationWindow = {
     gui = nil,
     parentFrame = nil,
     frame = nil,
@@ -100,20 +100,27 @@ function AuthenticationWindow:placeGlobalScreen()
     self.globalScreen.cancel = self.child.create.button({
         name="cancel",
         x=1, y=6, height=1, width=6,
-        text=self.gui.text({
+        text=self.child.text({
             text="Cancel",
-            blit={"000000", "EEEEEE"},
+            blit={"000000", "eeeeee"},
         }),
         on_click = function() self.running = false end
     })
     self.globalScreen.login = self.child.create.button({
         name="login",
         x=14, y=6, height=1, width=5,
-        text=self.gui.text({
+        text=self.child.text({
             text="Login",
-            blit={"00000", "DDDDD"},
+            blit={"00000", "ddddd"},
         }),
-        on_click=function() self:login() end
+        on_click=function()
+            if self:login() then
+                self.screen1.password.input = ""
+                self.screen1.password.selected = false
+                self.screen1.password.cursor_pos = 0
+            end
+        end,
+        logic_order=-1
     })
 end
 
@@ -129,6 +136,10 @@ function AuthenticationWindow:placeScreen1()
         char_limit=10,
         selected=true,
         background_color=colors.gray,
+        on_enter=function(object)
+            object.selected = false
+            self.child.elements.inputbox.password.selected = true
+        end
     })
     self.screen1.password = self.child.create.inputbox({
         name="password",
@@ -136,6 +147,13 @@ function AuthenticationWindow:placeScreen1()
         char_limit=math.huge,
         replace_char="*",
         background_color=colors.gray,
+        on_enter=function(object)
+            if self:login() then
+                object.selected = false
+                object.cursor_pos = 0
+                object.input = ""
+            end
+        end
     })
     
 end
@@ -173,9 +191,9 @@ function AuthenticationWindow:login()
     self.input = {}
     self.input.username = self.screen1.username.input
     self.input.password = sha1.sha1(self.screen1.password.input)
-    local file = fs.open("output", 'w')
     if self.input.username ~= self.credentials.username or self.input.password ~= self.credentials.password then
         self:writeAt(1, 5, "Wrong credentials", colors.red, colors.black)
+        return true
     else
         if self.credentials.totpSecret ~= nil then
             self:loadTOTP()
@@ -207,10 +225,11 @@ function AuthenticationWindow:start()
             while self.running do
                 sleep()
             end
+            self.gui.term_object.clear()
+            self.gui.term_object.setCursorPos(1, 1) -- reset the terminal
+            fs.unlock(self.screen1.password.input)
         end
     )
-
-    term.setCursorPos(1, 1) -- reset the terminal
 end
 
 return AuthenticationWindow
