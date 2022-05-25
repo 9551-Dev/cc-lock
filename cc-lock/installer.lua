@@ -26,5 +26,8 @@ for k,v in pairs(ls) do
         print("downloading "..v.."  "..tostring(math.ceil(finished*percent)).."%")
     end)
 end
+
+parallel.waitForAll(table.unpack(tasks))
+
 print("Finished downloading cc-lock!")
 print("Go to your root folder and type register to setup your login!")
