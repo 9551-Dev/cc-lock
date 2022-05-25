@@ -24,7 +24,7 @@ for k,v in pairs(ls) do
         web.close()
         finished = finished + 1
         print("downloading "..v.."  "..tostring(math.ceil(finished*percent)).."%")
-    end
+    end)
 end
 
 parallel.waitForAll(table.unpack(tasks))
